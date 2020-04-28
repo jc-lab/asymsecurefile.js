@@ -13,7 +13,7 @@
     "fix:lint": "eslint --ext \".js,.ts\" --fix ./src",
     "test:mocha": "mocha -r ts-node/register --recursive test/**/*.ts",
     "build": "tsc",
-    "prepublish": "npm run postinstall && npm run test && npm run build"
+    "prepack": "npm run postinstall && npm run test && npm run build"
   },
   "repository": {
     "type": "git",
