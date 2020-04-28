@@ -1,0 +1,20 @@
+# .travis.yml
+language: node_js
+node_js:
+  - node
+  - lts/*
+  - 12
+  - 11
+  - 10
+  - 9
+  - 8
+cache:
+  npm: true
+matrix:
+  allow_failures:
+    - node_js: 8
+install: npm ci
+before_script:
+  - tsc --version
+script: npm test
+
