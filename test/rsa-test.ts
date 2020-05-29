@@ -6,9 +6,15 @@ import * as cc from 'commons-crypto';
 import * as AsymSecureFile from "../src";
 import {CustomChunk} from "../src";
 
-const USE_MOCK_FILESYSTEM = process.env.USE_MOCK_FILESYSTEM || true;
+function toBoolean(s: string | undefined, defaultValue: boolean): boolean | undefined {
+  if (typeof s === 'undefined')
+    return defaultValue;
+  return /true|1|yes/i.test(s);
+}
+
+const USE_MOCK_FILESYSTEM = toBoolean(process.env.USE_MOCK_FILESYSTEM, true);
 const OUTPUT_ROOT_PATH = process.env.OUTPUT_ROOT_PATH || '';
-const USE_CONSOLE_OUTPUT = process.env.USE_CONSOLE_OUTPUT || false;
+const USE_CONSOLE_OUTPUT = toBoolean(process.env.USE_CONSOLE_OUTPUT, false);
 
 const chai = require('chai');
 const expect = chai.expect;
