@@ -40,23 +40,36 @@ export default class OrderSafety {
 
   run<T>(fn: RunFunction<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      if (this._lock) {
-        this._workQueue.push({
-          fn,
-          resolve,
-          reject
-        });
-        return;
-      }
-
-      this._lock = 1;
-      Promise.resolve(fn())
-        .then(resolve)
-        .catch(reject)
-        .finally(() => this._runQueue()
-          .finally(() => {
-            this._lock = 0;
-          }));
+      this._workQueue.push({
+        fn,
+        resolve,
+        reject
+      });
+      this._dequeue();
     });
+  }
+
+  private _dequeue() {
+    if (this._lock) {
+      return ;
+    }
+    const item = this._workQueue.shift();
+    if (!item) {
+      return ;
+    }
+    try {
+      this._lock = 1;
+      Promise.resolve(item.fn())
+        .then(item.resolve)
+        .catch(item.reject)
+        .finally(() => {
+          this._lock = 0;
+          this._dequeue();
+        });
+    } catch (e) {
+      item.reject(e);
+      this._lock = 0;
+      this._dequeue();
+    }
   }
 }

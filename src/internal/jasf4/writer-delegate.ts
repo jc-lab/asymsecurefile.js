@@ -477,10 +477,15 @@ export class Jasf4WriterDelegate implements WriterDelegate {
 
   write(chunk: Buffer, callback: (err: any) => void) {
     return this.init()
-      .then(() => this._writeData(chunk))
-      .then(() => callback(null))
-      .catch(err => callback(err));
+      .then(() =>
+        this._safeWrite.run(() => {
+          return this._writeData(chunk)
+            .then(() => callback(null))
+            .catch(err => callback(err));
+        })
+      );
   }
+
 
   final(callback: (err: any) => void) {
     return this.init()
