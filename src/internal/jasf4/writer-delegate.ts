@@ -230,6 +230,9 @@ export class Jasf4WriterDelegate implements WriterDelegate {
   private _writeData(data: Buffer): Promise<any> {
     const cipherText = this._dataCipher.update(data);
     if (cipherText && cipherText.length > 0) {
+      if (this._dataMac) {
+        this._dataMac.update(cipherText);
+      }
       return this._writeDataChunk(cipherText);
     }
     return Promise.resolve();
