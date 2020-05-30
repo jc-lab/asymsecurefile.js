@@ -16,12 +16,13 @@ export function makeAuthKeyCheck(key: Buffer): Asn1AuthKeyCheckChunk {
   const params = new PBKDF2Params({
     salt: new asn1js.OctetString({ valueHex: saltBuffer }),
     iterationCount: 4000,
+    keyLength: 32,
     prf: new AlgorithmIdentifier({
       algorithmId: '1.2.840.113549.2.9', // hmacSha256
       algorithmParams: new asn1js.Null()
     })
   });
-  const dfkey = crypto.pbkdf2Sync(key, saltBuffer, 4000, 16, 'sha256');
+  const dfkey = crypto.pbkdf2Sync(key, saltBuffer, params.iterationCount, params.keyLength, 'sha256');
   return Asn1AuthKeyCheckChunk.create(
     params.toSchema(), dfkey
   );
@@ -32,7 +33,8 @@ export function checkAuthKey(chunk: Asn1AuthKeyCheckChunk, key: Buffer): boolean
     schema: chunk.params
   });
   const saltBuffer = arrayBufferToBuffer(params.salt.valueBlock.valueHex);
-  const dfkey = crypto.pbkdf2Sync(key, saltBuffer, params.iterationCount, 32, 'sha256');
+  const keyLength = params.keyLength || 32;
+  const dfkey = crypto.pbkdf2Sync(key, saltBuffer, params.iterationCount, keyLength, 'sha256');
   const targetKey = arrayBufferToBuffer(chunk.key.valueBlock.valueHex);
   return targetKey.compare(dfkey) === 0;
 }
