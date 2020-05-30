@@ -163,7 +163,11 @@ export class GCMParameters implements asn1js.LocalValueBlock {
     if ('schema' in params) {
       const seq = params.schema;
       this.nonce = toBuffer(seq.valueBlock.value[0] as asn1js.OctetString);
-      this.icvLen = toNumber(seq.valueBlock.value[1] as asn1js.Integer);
+      if (seq.valueBlock.value.length > 1) {
+        this.icvLen = toNumber(seq.valueBlock.value[1] as asn1js.Integer);
+      } else {
+        this.icvLen = 12;
+      }
     } else {
       this.nonce = params.nonce;
       this.icvLen = params.icvLen;
