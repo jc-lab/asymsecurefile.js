@@ -198,6 +198,11 @@ export class Jasf4ReaderDelegate implements ReaderDelegate {
   }
 
   public final(callback: (err: any) => void) {
+    if (!this._dataReadReady) {
+      callback(new Error('data read not ready'));
+      return ;
+    }
+
     const macOfEncryptedDataChunk = this._chunks.get(Asn1MacOfEncryptedDataChunk.CHUNK_ID) as Asn1MacOfEncryptedDataChunk;
     if (this._dataCryptoAlgorithm.isGcmMode) {
       this._dataDecipher.setAuthTag(macOfEncryptedDataChunk.getData());

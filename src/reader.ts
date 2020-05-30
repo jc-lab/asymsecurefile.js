@@ -256,17 +256,20 @@ export class Reader extends streams.Transform {
     const authKey = Buffer.isBuffer(params.authKey) ? params.authKey : params.authKey && Buffer.from(params.authKey);
     const key = params.key || (this._opts && this._opts.key);
     if (!authKey) {
-      throw new Error('need authKey');
+      return Promise.reject(new Error('need authKey'));
     }
     if (!key) {
-      throw new Error('need key');
+      return Promise.reject(new Error('need key'));
     }
     return this._delegate.init({
       authKey: authKey,
       key: key
     })
       .then(() => this._initWaitSignal.signal())
-      .catch((e) => this._initWaitSignal.throw(e));
+      .catch((e) => {
+        this._initWaitSignal.throw(e);
+        return Promise.reject(e);
+      });
   }
 
   public getCustomChunk(id: number): CustomChunk | undefined {
