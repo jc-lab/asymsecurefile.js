@@ -21,7 +21,7 @@ export function makeAuthKeyCheck(key: Buffer): Asn1AuthKeyCheckChunk {
       algorithmParams: new asn1js.Null()
     })
   });
-  const dfkey = crypto.pbkdf2Sync(key, saltBuffer, 4000, 256, 'sha256');
+  const dfkey = crypto.pbkdf2Sync(key, saltBuffer, 4000, 16, 'sha256');
   return Asn1AuthKeyCheckChunk.create(
     params.toSchema(), dfkey
   );
@@ -32,7 +32,7 @@ export function checkAuthKey(chunk: Asn1AuthKeyCheckChunk, key: Buffer): boolean
     schema: chunk.params
   });
   const saltBuffer = arrayBufferToBuffer(params.salt.valueBlock.valueHex);
-  const dfkey = crypto.pbkdf2Sync(key, saltBuffer, params.iterationCount, 256, 'sha256');
+  const dfkey = crypto.pbkdf2Sync(key, saltBuffer, params.iterationCount, 32, 'sha256');
   const targetKey = arrayBufferToBuffer(chunk.key.valueBlock.valueHex);
   return targetKey.compare(dfkey) === 0;
 }
