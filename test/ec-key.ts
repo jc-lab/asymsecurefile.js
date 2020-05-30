@@ -148,15 +148,21 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
         key: pubKey
       });
       reader
-        .on('header-complete', async () => {
+        .on('header-complete', () => {
           if(USE_CONSOLE_OUTPUT) {
             console.log('header-complete');
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
             // console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02)); // throw error
           }
-          await reader.init({
+          reader.init({
             authKey: '1234'
-          });
+          })
+            .then(() => {
+              if(USE_CONSOLE_OUTPUT) {
+                console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
+              }
+            })
+            .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {
             console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
           }
@@ -313,9 +319,15 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
             // console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02)); // throw error
           }
-          await reader.init({
+          reader.init({
             authKey: '1234'
-          });
+          })
+            .then(() => {
+              if(USE_CONSOLE_OUTPUT) {
+                console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
+              }
+            })
+            .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {
             console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
           }
@@ -353,15 +365,21 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
         key: pubKey
       });
       reader
-        .on('header-complete', async () => {
+        .on('header-complete', () => {
           if(USE_CONSOLE_OUTPUT) {
             console.log('header-complete');
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
             // console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02)); // throw error
           }
-          await reader.init({
+          reader.init({
             authKey: '1234'
-          });
+          })
+            .then(() => {
+              if(USE_CONSOLE_OUTPUT) {
+                console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
+              }
+            })
+            .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {
             console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
           }
@@ -400,15 +418,21 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
         key: priKey
       });
       reader
-        .on('header-complete', async () => {
+        .on('header-complete', () => {
           if(USE_CONSOLE_OUTPUT) {
             console.log('header-complete');
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
             // console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02)); // throw error
           }
-          await reader.init({
+          reader.init({
             authKey: '1234'
-          });
+          })
+            .then(() => {
+              if(USE_CONSOLE_OUTPUT) {
+                console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
+              }
+            })
+            .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {
             console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
           }

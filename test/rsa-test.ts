@@ -152,9 +152,15 @@ N1JinKuM1XYpyKvqlQIDAQAB
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
             // console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02)); // throw error
           }
-          await reader.init({
+          reader.init({
             authKey: '1234'
-          });
+          })
+            .then(() => {
+              if(USE_CONSOLE_OUTPUT) {
+                console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
+              }
+            })
+            .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {
             console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
           }
@@ -229,9 +235,15 @@ N1JinKuM1XYpyKvqlQIDAQAB
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
             // console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02)); // throw error
           }
-          await reader.init({
+          reader.init({
             authKey: '1234'
-          });
+          })
+            .then(() => {
+              if(USE_CONSOLE_OUTPUT) {
+                console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
+              }
+            })
+            .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {
             console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
           }
