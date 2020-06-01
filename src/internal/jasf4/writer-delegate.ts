@@ -430,12 +430,12 @@ export class Jasf4WriterDelegate implements WriterDelegate {
         if (this._props.operationType.isPublicEncrypt()) {
           if (dataCryptoAlgorithm.isGcmMode) {
             dataMacAlgorithm = new AlgorithmIdentifier({
-              algorithm: '1.0.9797.3.4'
+              algorithmId: '1.0.9797.3.4'
             });
             this._dataCipher.setAAD(dataMacKey);
           } else {
             dataMacAlgorithm = new AlgorithmIdentifier({
-              algorithm: '1.2.840.113549.2.9'
+              algorithmId: '1.2.840.113549.2.9'
             });
             this._dataMac = crypto.createHmac('sha256', dataMacKey);
           }
