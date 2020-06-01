@@ -230,7 +230,6 @@ export function findHashByOid(oid: string): HashAlgorithm | undefined {
 export interface ICreateCipherOptions {
   nodeAlgorithm?: string;
   oid?: string;
-  authTagLength?: number;
   key: Buffer;
   iv?: Buffer;
   icvLen?: number;
@@ -261,9 +260,7 @@ export function createCipher(options: ICreateCipherOptions): ICreateCipherResult
   if (!algorithm) {
     throw new Error('Unknown algorithm');
   }
-  const cipherOptions = {
-    authTagLength: options.authTagLength
-  };
+  const cipherOptions: any = {};
   let iv = options.iv;
   let icvLen: number | undefined = options.icvLen;
   if (options.parameterSpec && algorithm.parseParameterSpec) {
@@ -274,15 +271,22 @@ export function createCipher(options: ICreateCipherOptions): ICreateCipherResult
   if (!iv) {
     throw new Error('Need IV');
   }
+  const parameterSpec = algorithm.createParameterSpec ?
+    algorithm.createParameterSpec({iv, icvLen}) :
+    undefined;
+  if (parameterSpec) {
+    icvLen = (parameterSpec as any).icvLen;
+    if (icvLen) {
+      cipherOptions.authTagLength = icvLen;
+    }
+  }
   return {
     ...algorithm,
     //@ts-ignore
     createCipher: () => crypto.createCipheriv(algorithm.nodeAlgorithm, options.key, iv, cipherOptions),
     //@ts-ignore
     createDecipher: () => crypto.createDecipheriv(algorithm.nodeAlgorithm, options.key, iv, cipherOptions),
-    parameterSpec: algorithm.createParameterSpec ?
-      algorithm.createParameterSpec({iv, icvLen}) :
-      undefined,
+    parameterSpec: parameterSpec,
     icvLen: icvLen
   };
 }
