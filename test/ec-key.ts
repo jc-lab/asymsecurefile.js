@@ -250,7 +250,10 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
               }
               next();
             })
-            .catch(e => reject(e));
+            .catch(e => {
+              reader.destroy(e);
+              reject(e);
+            });
         })
         .on('custom-chunk', (chunk: AsymSecureFile.CustomChunk) => {
           if(USE_CONSOLE_OUTPUT) {

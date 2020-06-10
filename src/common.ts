@@ -68,3 +68,7 @@ import {
 
 export {AsymAlgorithm,
   NotSupportedVersionError};
+
+export function authKeyToBuffer(input: string | Buffer): Buffer {
+  return Buffer.isBuffer(input) && input || Buffer.from(input, 'utf8');
+}

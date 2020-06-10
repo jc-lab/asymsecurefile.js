@@ -1,7 +1,7 @@
 import asn1js from 'asn1js';
 import * as cc from 'commons-crypto';
 import {
-  IExactReaderInitParams,
+  IReaderInitParams,
   IReaderHandlers,
   ReaderDelegate
 } from '../reader-delegate';
@@ -56,18 +56,23 @@ import {
   AsymmetricKeyObject
 } from 'commons-crypto';
 
+const S_authKey = Symbol('authKey');
 const S_asymKey = Symbol('asymKey');
 export class Jasf4ReaderDelegate implements ReaderDelegate {
   private _readerHandlers: IReaderHandlers;
   private _asnReader: Asn1Reader;
   private _asnSequence: number;
 
+  private [S_authKey]: Buffer | null = null;
   private [S_asymKey]!: AsymmetricKeyObject;
+
+  private _authKeyInited: boolean = false;
 
   private _minorVersion: number = 0;
   private _operationType!: OperationType;
   private _chunks: Map<number, Asn1ObjectChunk> = new Map();
   private _pendingChunks: Asn1ObjectChunk[] = [];
+  private _pendingDataChunks: Asn1DataChunk[] = [];
 
   private _fingerprintPending: Buffer[] = [];
   private _fingerprintHash: crypto.Hash | null | false = null;
@@ -128,10 +133,11 @@ export class Jasf4ReaderDelegate implements ReaderDelegate {
             } else if (chunk.id === ChunkIds.Data) {
               if (!this._headerReadCompleted) {
                 this._headerReadCompleted = true;
-                this._readerHandlers.headerComplete();
+                this._initAuthKey()
+                  .then(() => this._readerHandlers.headerComplete());
               }
               if (!this._dataReadReady) {
-                this._pendingChunks.push(chunk);
+                this._pendingDataChunks.push(chunk as Asn1DataChunk);
               } else {
                 const paused = !this._asnReader.isPaused();
                 if (paused) {
@@ -250,108 +256,128 @@ export class Jasf4ReaderDelegate implements ReaderDelegate {
     callback(null);
   }
 
-  public init(params: IExactReaderInitParams): Promise<any> {
-    const authKeyCheckChunk = this._chunks.get(ChunkIds.AuthKeyCheckData) as Asn1AuthKeyCheckChunk;
-    if (!checkAuthKey(authKeyCheckChunk, params.authKey)) {
-      return Promise.reject(new Error('authKey is not correct'));
+  public setAuthKey(authKey: Buffer) {
+    this[S_authKey] = authKey;
+  }
+
+  private _initAuthKey(argAuthKey?: Buffer): Promise<void> {
+    if (this._authKeyInited) {
+      return Promise.resolve();
     }
 
-    this[S_asymKey] = params.key;
-
-    this._defaultHeaderChunk = this._chunks.get(ChunkIds.DefaultHeader) as Asn1DefaultHeaderChunk;
-    const authKeyDerivationPool = rfc5869(params.authKey, 'sha256', 64);
-    this._authEncryptKey = authKeyDerivationPool.slice(0, 32);
-    this._authMacKey = authKeyDerivationPool.slice(32, 64);
-    this._authKeyCryptoIv = arrayBufferToBuffer(this._defaultHeaderChunk.authKeyCryptionIv.valueBlock.valueHex);
-
-    const pendingDataChunks: Asn1DataChunk[] = [];
-
-    let chunk;
-    while ((chunk = this._pendingChunks.shift())) {
-      if (Asn1EncryptedChunk.isInstance(chunk)) {
-        const chunkImpl = chunk as Asn1EncryptedChunk;
-        const cipher = this._createAuthKeyDecipher();
-        const decryptedData = Buffer.concat([
-          cipher.update(arrayBufferToBuffer(chunkImpl.getChunkData().valueBlock.valueHex)),
-          cipher.final()
-        ]);
-        const decrypted = chunkImpl.getDecryptedChunk(decryptedData);
-        this._onReadChunk(decrypted);
-      } else {
-        pendingDataChunks.push(chunk as Asn1DataChunk);
+    const authKey = argAuthKey || this[S_authKey];
+    this[S_authKey] = null;
+    if (authKey) {
+      const authKeyCheckChunk = this._chunks.get(ChunkIds.AuthKeyCheckData) as Asn1AuthKeyCheckChunk;
+      if (!checkAuthKey(authKeyCheckChunk, authKey)) {
+        return Promise.reject(new Error('authKey is not correct'));
       }
-    }
 
-    let dataKeyInfoChunk: Asn1DataKeyInfoChunk | null = null;
-    let dataCryptoKey: Buffer | null = null;
-    let dataMacKey: Buffer | null = null;
-    if (this._operationType.isSign()) {
-      dataKeyInfoChunk = this._chunks.get(Asn1DataKeyInfoChunk.CHUNK_ID) as Asn1DataKeyInfoChunk;
-    }
-    if (this._operationType.isPublicEncrypt()) {
-      if (params.key.privateDecryptable) {
-        const encryptedDataKeyInfo = this._chunks.get(Asn1EncryptedDataKeyInfoChunk.CHUNK_ID) as Asn1EncryptedDataKeyInfoChunk;
-        const decryptedData = params.key.privateDecrypt(encryptedDataKeyInfo.getData());
-        dataKeyInfoChunk = Asn1DataKeyInfoChunk.decodeChunkData(
-          encryptedDataKeyInfo.id, encryptedDataKeyInfo.flags.value,
-          decryptedData
-        ) as Asn1DataKeyInfoChunk;
-      } else {
-        const ecPublicKeyChunk = this._chunks.get(Asn1EphemeralECPublicKeyChunk.CHUNK_ID) as Asn1EphemeralECPublicKeyChunk;
-        const dhCheckDataChunk = this._chunks.get(Asn1DHCheckDataChunk.CHUNK_ID) as Asn1DHCheckDataChunk;
-        const publicKey = cc.createAsymmetricKey({
-          key: ecPublicKeyChunk.data.toSchema().toBER(),
-          format: 'der',
-          type: 'spki'
-        });
-        const ecdh = params.key.dhComputeSecret(publicKey);
-        const hkdfResult = hkdfCompute({
-          nodeAlgorithm: 'sha256',
-          master: ecdh,
-          length: 96,
-          salt: Buffer.alloc(0)
-        });
-        dataCryptoKey = hkdfResult.output.slice(0, 32);
-        dataMacKey = hkdfResult.output.slice(32, 64);
-        const computedDhCheckData = hkdfResult.output.slice(64, 96);
-        if (!dhCheckDataChunk.equals(computedDhCheckData)) {
-          return Promise.reject(new Error('wrong key'));
+      this._defaultHeaderChunk = this._chunks.get(ChunkIds.DefaultHeader) as Asn1DefaultHeaderChunk;
+      const authKeyDerivationPool = rfc5869(authKey, 'sha256', 64);
+      this._authEncryptKey = authKeyDerivationPool.slice(0, 32);
+      this._authMacKey = authKeyDerivationPool.slice(32, 64);
+      this._authKeyCryptoIv = arrayBufferToBuffer(this._defaultHeaderChunk.authKeyCryptionIv.valueBlock.valueHex);
+
+      this._authKeyInited = true;
+
+      let chunk;
+      while ((chunk = this._pendingChunks.shift())) {
+        if (Asn1EncryptedChunk.isInstance(chunk)) {
+          const chunkImpl = chunk as Asn1EncryptedChunk;
+          const cipher = this._createAuthKeyDecipher();
+          const decryptedData = Buffer.concat([
+            cipher.update(arrayBufferToBuffer(chunkImpl.getChunkData().valueBlock.valueHex)),
+            cipher.final()
+          ]);
+          const decrypted = chunkImpl.getDecryptedChunk(decryptedData);
+          this._onReadChunk(decrypted);
         }
       }
     }
-    if (dataKeyInfoChunk) {
-      if (!dataKeyInfoChunk.validate()) {
-        return Promise.reject(new Error('Wrong key'));
-      }
-      dataCryptoKey = arrayBufferToBuffer(dataKeyInfoChunk.dataKey.valueBlock.valueHex);
-      dataMacKey = arrayBufferToBuffer(dataKeyInfoChunk.macKey.valueBlock.valueHex);
-    }
-    if (!dataCryptoKey || !dataMacKey) {
-      return Promise.reject('Unknown error');
-    }
 
-    const dataCryptoAlgorithmChunk = this._chunks.get(Asn1DataCryptoAlgorithmSpecChunk.CHUNK_ID) as Asn1DataCryptoAlgorithmSpecChunk;
-    const dataCryptoAlgorithm = cryptoUtils.createCipher({
-      oid: this._defaultHeaderChunk.dataCryptoAlgorithm.valueBlock.toString(),
-      key: dataCryptoKey,
-      parameterSpec: dataCryptoAlgorithmChunk.data
-    });
-    this._dataCryptoAlgorithm = dataCryptoAlgorithm;
-    this._dataDecipher = dataCryptoAlgorithm.createDecipher();
-    if (dataCryptoAlgorithm.isGcmMode) {
-      this._dataDecipher.setAAD(dataMacKey);
-    } else {
-      this._dataMac = null;
-    }
-    this._dataReadReady = true;
+    return Promise.resolve();
+  }
 
-    return pendingDataChunks.reduce(
-      (prev, cur) => prev.then(
-        () => {
-          return this.processDataChunk(cur);
+  public init(params: IReaderInitParams): Promise<any> {
+    return (this._initAuthKey(params.authKey))
+      .then(() => this._authKeyInited &&
+        Promise.resolve() ||
+        Promise.reject(new Error('authKey is not set: ' + this._authKeyInited)))
+      .then(() => {
+        this[S_asymKey] = params.key;
+
+        let dataKeyInfoChunk: Asn1DataKeyInfoChunk | null = null;
+        let dataCryptoKey: Buffer | null = null;
+        let dataMacKey: Buffer | null = null;
+        if (this._operationType.isSign()) {
+          dataKeyInfoChunk = this._chunks.get(Asn1DataKeyInfoChunk.CHUNK_ID) as Asn1DataKeyInfoChunk;
         }
-      ), Promise.resolve(true)
-    );
+        if (this._operationType.isPublicEncrypt()) {
+          if (params.key.privateDecryptable) {
+            const encryptedDataKeyInfo = this._chunks.get(Asn1EncryptedDataKeyInfoChunk.CHUNK_ID) as Asn1EncryptedDataKeyInfoChunk;
+            const decryptedData = params.key.privateDecrypt(encryptedDataKeyInfo.getData());
+            dataKeyInfoChunk = Asn1DataKeyInfoChunk.decodeChunkData(
+              encryptedDataKeyInfo.id, encryptedDataKeyInfo.flags.value,
+              decryptedData
+            ) as Asn1DataKeyInfoChunk;
+          } else {
+            const ecPublicKeyChunk = this._chunks.get(Asn1EphemeralECPublicKeyChunk.CHUNK_ID) as Asn1EphemeralECPublicKeyChunk;
+            const dhCheckDataChunk = this._chunks.get(Asn1DHCheckDataChunk.CHUNK_ID) as Asn1DHCheckDataChunk;
+            const publicKey = cc.createAsymmetricKey({
+              key: ecPublicKeyChunk.data.toSchema().toBER(),
+              format: 'der',
+              type: 'spki'
+            });
+            const ecdh = params.key.dhComputeSecret(publicKey);
+            const hkdfResult = hkdfCompute({
+              nodeAlgorithm: 'sha256',
+              master: ecdh,
+              length: 96,
+              salt: Buffer.alloc(0)
+            });
+            dataCryptoKey = hkdfResult.output.slice(0, 32);
+            dataMacKey = hkdfResult.output.slice(32, 64);
+            const computedDhCheckData = hkdfResult.output.slice(64, 96);
+            if (!dhCheckDataChunk.equals(computedDhCheckData)) {
+              return Promise.reject(new Error('wrong key'));
+            }
+          }
+        }
+        if (dataKeyInfoChunk) {
+          if (!dataKeyInfoChunk.validate()) {
+            return Promise.reject(new Error('Wrong key'));
+          }
+          dataCryptoKey = arrayBufferToBuffer(dataKeyInfoChunk.dataKey.valueBlock.valueHex);
+          dataMacKey = arrayBufferToBuffer(dataKeyInfoChunk.macKey.valueBlock.valueHex);
+        }
+        if (!dataCryptoKey || !dataMacKey) {
+          return Promise.reject('Unknown error');
+        }
+
+        const dataCryptoAlgorithmChunk = this._chunks.get(Asn1DataCryptoAlgorithmSpecChunk.CHUNK_ID) as Asn1DataCryptoAlgorithmSpecChunk;
+        const dataCryptoAlgorithm = cryptoUtils.createCipher({
+          oid: this._defaultHeaderChunk.dataCryptoAlgorithm.valueBlock.toString(),
+          key: dataCryptoKey,
+          parameterSpec: dataCryptoAlgorithmChunk.data
+        });
+        this._dataCryptoAlgorithm = dataCryptoAlgorithm;
+        this._dataDecipher = dataCryptoAlgorithm.createDecipher();
+        if (dataCryptoAlgorithm.isGcmMode) {
+          this._dataDecipher.setAAD(dataMacKey);
+        } else {
+          this._dataMac = null;
+        }
+        this._dataReadReady = true;
+
+        const pendingDataChunks = this._pendingDataChunks;
+        this._pendingDataChunks = [];
+        return pendingDataChunks.reduce(
+          (prev, cur) => prev.then(
+            () => this.processDataChunk(cur)
+          ), Promise.resolve(true)
+        );
+      });
   }
 
   parse(readBuffer: ReadBuffer): Promise<ParseResult> {

@@ -22,6 +22,7 @@ import {
   ParseResult
 } from './internal/intl';
 import {
+  authKeyToBuffer,
   IReaderParams,
   ReaderInitParams
 } from './common';
@@ -29,7 +30,7 @@ import {
   CustomChunk
 } from './custom-chunk';
 import {
-  IExactReaderInitParams,
+  IReaderInitParams,
   IReaderHandlers,
   ReaderDelegate
 } from './internal/reader-delegate';
@@ -82,6 +83,8 @@ export class Reader extends streams.Transform {
 
   private _initWaitSignal: WaitSignal = new WaitSignal();
 
+  private _pauseRead: boolean = false;
+
   constructor(opts?: IReaderParams) {
     super(opts);
     const self = this;
@@ -111,20 +114,19 @@ export class Reader extends streams.Transform {
         self.emit('custom-chunk', chunk);
       },
       headerComplete: () => {
-        const paused = !this.isPaused();
+        const paused = !self._pauseRead;
+        self._pauseRead = true;
         self._headerReadComplete = true;
-        if (paused) {
-          this.pause();
-        }
         const nextCallback = () => {
-          if (paused) {
-            this.resume();
-          }
           if (this._opts && this._opts.authKey && this._opts.key) {
             this._runAutoInit({
               authKey: Buffer.isBuffer(this._opts.authKey) ? this._opts.authKey : Buffer.from(this._opts.authKey),
               key: this._opts.key
             });
+          }
+
+          if (paused) {
+            this._pauseRead = false;
           }
         };
         if (self.emit('header-complete', nextCallback)) {
@@ -148,6 +150,10 @@ export class Reader extends streams.Transform {
 
     try {
       this._delegate = versionRouter.createReaderDelegate(this[S_readerHandlers], this._signatureHeader.version);
+      const authKey = this._opts && this._opts.authKey && authKeyToBuffer(this._opts.authKey);
+      if (authKey) {
+        this._delegate.setAuthKey(authKey);
+      }
     } catch (e) {
       return Promise.reject(e);
     }
@@ -211,7 +217,14 @@ export class Reader extends streams.Transform {
           } else {
             footerBuffer = dataBuf;
           }
-          callback();
+          const doCallback = () => {
+            if (this._pauseRead) {
+              setImmediate(doCallback);
+            } else {
+              callback();
+            }
+          };
+          doCallback();
         } catch (err) {
           this.emit('error', err);
         }
@@ -244,6 +257,8 @@ export class Reader extends streams.Transform {
   }
 
   destroy(err?: Error): void {
+    this._pauseRead = false;
+
     if (this._destroyed) return ;
     this._destroyed = true;
 
@@ -251,7 +266,7 @@ export class Reader extends streams.Transform {
     this.emit('close');
   }
 
-  private _runAutoInit(params: IExactReaderInitParams) {
+  private _runAutoInit(params: IReaderInitParams) {
     this._delegate.init(params)
       .then(() => {
         this._initWaitSignal.signal();
@@ -262,14 +277,8 @@ export class Reader extends streams.Transform {
   }
 
   public init(params: ReaderInitParams): Promise<void> {
-    if (!params.authKey) {
-      return Promise.reject(new Error('authKey is not defined'));
-    }
-    const authKey = Buffer.isBuffer(params.authKey) ? params.authKey : params.authKey && Buffer.from(params.authKey);
+    const authKey = params.authKey && authKeyToBuffer(params.authKey) || undefined;
     const key = params.key || (this._opts && this._opts.key);
-    if (!authKey) {
-      return Promise.reject(new Error('need authKey'));
-    }
     if (!key) {
       return Promise.reject(new Error('need key'));
     }

@@ -9,13 +9,14 @@ import {
   AsymmetricKeyObject
 } from 'commons-crypto';
 
-export interface IExactReaderInitParams {
-  authKey: Buffer;
+export interface IReaderInitParams {
+  authKey?: Buffer;
   key: AsymmetricKeyObject;
 }
 
 export interface ReaderDelegate {
-  init(params: IExactReaderInitParams): Promise<void>;
+  setAuthKey(authKey: Buffer): void;
+  init(params: IReaderInitParams): Promise<void>;
   final(callback: (err: any) => void);
   parse(readBuffer: ReadBuffer): Promise<ParseResult>;
 }
