@@ -146,7 +146,7 @@ N1JinKuM1XYpyKvqlQIDAQAB
         key: pubKey
       });
       reader
-        .on('header-complete', async () => {
+        .on('header-complete', (next) => {
           if(USE_CONSOLE_OUTPUT) {
             console.log('header-complete');
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
@@ -159,6 +159,7 @@ N1JinKuM1XYpyKvqlQIDAQAB
               if(USE_CONSOLE_OUTPUT) {
                 console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
               }
+              next();
             })
             .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {
@@ -229,7 +230,7 @@ N1JinKuM1XYpyKvqlQIDAQAB
         key: priKey
       });
       reader
-        .on('header-complete', async () => {
+        .on('header-complete', (next) => {
           if(USE_CONSOLE_OUTPUT) {
             console.log('header-complete');
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
@@ -242,6 +243,7 @@ N1JinKuM1XYpyKvqlQIDAQAB
               if(USE_CONSOLE_OUTPUT) {
                 console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
               }
+              next();
             })
             .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {

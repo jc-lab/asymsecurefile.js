@@ -148,7 +148,7 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
         key: pubKey
       });
       reader
-        .on('header-complete', () => {
+        .on('header-complete', (next) => {
           if(USE_CONSOLE_OUTPUT) {
             console.log('header-complete');
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
@@ -161,6 +161,7 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
               if(USE_CONSOLE_OUTPUT) {
                 console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
               }
+              next();
             })
             .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {
@@ -234,7 +235,7 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
         key: pubKey
       });
       reader
-        .on('header-complete', () => {
+        .on('header-complete', (next) => {
           if(USE_CONSOLE_OUTPUT) {
             console.log('header-complete');
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
@@ -247,6 +248,7 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
               if(USE_CONSOLE_OUTPUT) {
                 console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
               }
+              next();
             })
             .catch(e => reject(e));
         })
@@ -313,7 +315,7 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
         key: priKey
       });
       reader
-        .on('header-complete', async () => {
+        .on('header-complete', (next) => {
           if(USE_CONSOLE_OUTPUT) {
             console.log('header-complete');
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
@@ -326,6 +328,7 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
               if(USE_CONSOLE_OUTPUT) {
                 console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
               }
+              next();
             })
             .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {
@@ -365,7 +368,7 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
         key: pubKey
       });
       reader
-        .on('header-complete', () => {
+        .on('header-complete', (next) => {
           if(USE_CONSOLE_OUTPUT) {
             console.log('header-complete');
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
@@ -378,6 +381,7 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
               if(USE_CONSOLE_OUTPUT) {
                 console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
               }
+              next();
             })
             .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {
@@ -418,7 +422,7 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
         key: priKey
       });
       reader
-        .on('header-complete', () => {
+        .on('header-complete', (next) => {
           if(USE_CONSOLE_OUTPUT) {
             console.log('header-complete');
             console.log('custom-chunk 0x01 : ', reader.getCustomChunk(0x01));
@@ -431,6 +435,7 @@ P5NGJ+wzyyYhWua2GYQOtvvY1ahojkT71lry78xu0bIyLVBRIfCpyA==
               if(USE_CONSOLE_OUTPUT) {
                 console.log('custom-chunk 0x02 : ', reader.getCustomChunk(0x02));
               }
+              next();
             })
             .catch(e => reject(e));
           if(USE_CONSOLE_OUTPUT) {

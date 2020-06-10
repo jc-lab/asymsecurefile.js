@@ -99,7 +99,7 @@ export class Reader extends streams.Transform {
       push: chunk => new Promise<boolean>((resolve, reject) => {
         const trySend = () => {
           if (self.isPaused()) {
-            setTimeout(trySend, 1);
+            setImmediate(trySend);
           } else {
             resolve(self.push(chunk));
           }
@@ -111,14 +111,26 @@ export class Reader extends streams.Transform {
         self.emit('custom-chunk', chunk);
       },
       headerComplete: () => {
+        const paused = !this.isPaused();
         self._headerReadComplete = true;
-        self.emit('header-complete');
-        if (this._opts && this._opts.authKey && this._opts.key) {
-          this._runAutoInit({
-            authKey: Buffer.isBuffer(this._opts.authKey) ? this._opts.authKey : Buffer.from(this._opts.authKey),
-            key: this._opts.key
-          });
+        if (paused) {
+          this.pause();
         }
+        const nextCallback = () => {
+          if (paused) {
+            this.resume();
+          }
+          if (this._opts && this._opts.authKey && this._opts.key) {
+            this._runAutoInit({
+              authKey: Buffer.isBuffer(this._opts.authKey) ? this._opts.authKey : Buffer.from(this._opts.authKey),
+              key: this._opts.key
+            });
+          }
+        };
+        if (self.emit('header-complete', nextCallback)) {
+          return ;
+        }
+        nextCallback();
       }
     };
   }

@@ -133,7 +133,16 @@ export class Jasf4ReaderDelegate implements ReaderDelegate {
               if (!this._dataReadReady) {
                 this._pendingChunks.push(chunk);
               } else {
-                this.processDataChunk(chunk as Asn1DataChunk);
+                const paused = !this._asnReader.isPaused();
+                if (paused) {
+                  this._asnReader.pause();
+                }
+                this.processDataChunk(chunk as Asn1DataChunk)
+                  .finally(() => {
+                    if (paused) {
+                      this._asnReader.resume();
+                    }
+                  });
               }
             }
             if (chunk.id != ChunkIds.Data) {
@@ -186,15 +195,16 @@ export class Jasf4ReaderDelegate implements ReaderDelegate {
     return crypto.createDecipher();
   }
 
-  processDataChunk(chunk: Asn1DataChunk) {
+  processDataChunk(chunk: Asn1DataChunk): Promise<boolean> {
     const data = chunk.getData();
     if (this._dataMac) {
       this._dataMac.update(data);
     }
     const decrypted = this._dataDecipher.update(data);
     if (decrypted) {
-      this._readerHandlers.push(decrypted);
+      return this._readerHandlers.push(decrypted);
     }
+    return Promise.resolve(true);
   }
 
   public final(callback: (err: any) => void) {
@@ -240,7 +250,7 @@ export class Jasf4ReaderDelegate implements ReaderDelegate {
     callback(null);
   }
 
-  public init(params: IExactReaderInitParams): Promise<void> {
+  public init(params: IExactReaderInitParams): Promise<any> {
     const authKeyCheckChunk = this._chunks.get(ChunkIds.AuthKeyCheckData) as Asn1AuthKeyCheckChunk;
     if (!checkAuthKey(authKeyCheckChunk, params.authKey)) {
       return Promise.reject(new Error('authKey is not correct'));
@@ -335,9 +345,13 @@ export class Jasf4ReaderDelegate implements ReaderDelegate {
     }
     this._dataReadReady = true;
 
-    pendingDataChunks.forEach(chunk => this.processDataChunk(chunk));
-
-    return Promise.resolve(undefined);
+    return pendingDataChunks.reduce(
+      (prev, cur) => prev.then(
+        () => {
+          return this.processDataChunk(cur);
+        }
+      ), Promise.resolve(true)
+    );
   }
 
   parse(readBuffer: ReadBuffer): Promise<ParseResult> {
