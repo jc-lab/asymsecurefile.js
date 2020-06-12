@@ -1,6 +1,6 @@
 {
   "name": "asymsecurefile",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -55,7 +55,7 @@
     "axios": "^0.19.2",
     "bn.js": "^5.1.1",
     "browserify-rsa": "^4.0.1",
-    "commons-crypto": "^0.0.5",
+    "commons-crypto": "^0.0.6",
     "pkijs": "^2.1.88",
     "uuid": "^7.0.3",
     "wait-signal": "^1.0.4"
