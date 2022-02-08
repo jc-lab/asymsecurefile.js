@@ -244,8 +244,10 @@ export class Reader extends streams.Transform {
   }
 
   _final(callback: (error?: (Error | null)) => void): void {
-    if (this._partial)
-      return this.destroy(new Error('Unexpected end of data'));
+    if (this._partial) {
+      this.destroy(new Error('Unexpected end of data'));
+      return ;
+    }
     this._delegate.final((err) => {
       if (err) {
         callback(err);
@@ -256,14 +258,16 @@ export class Reader extends streams.Transform {
     this.destroy();
   }
 
-  destroy(err?: Error): void {
+  destroy(err?: Error): this {
     this._pauseRead = false;
 
-    if (this._destroyed) return ;
+    if (this._destroyed) return this;
     this._destroyed = true;
 
     if (err) this.emit('error', err);
     this.emit('close');
+
+    return this;
   }
 
   private _runAutoInit(params: IReaderInitParams) {

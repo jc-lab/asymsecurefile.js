@@ -54,6 +54,7 @@ import PublicKeyInfo from 'pkijs/build/PublicKeyInfo';
 import TimeStampReq from 'pkijs/build/TimeStampReq';
 import MessageImprint from 'pkijs/build/MessageImprint';
 import TimeStampResp from 'pkijs/build/TimeStampResp';
+import PrivateKeyInfo from '../asn/PrivateKeyInfo';
 import {
   AsymmetricAlgorithmType
 } from 'commons-crypto';
@@ -76,7 +77,7 @@ function makeAsymAlgorithmParamChunk(key: cc.AsymmetricKeyObject): Asn1AsymAlgor
           format: 'der'
         }));
         const {result} = asn1js.fromBER(ber);
-        const privateKeyInfo = new cc.asn.PrivateKeyInfo({
+        const privateKeyInfo = new PrivateKeyInfo({
           schema: result
         });
 

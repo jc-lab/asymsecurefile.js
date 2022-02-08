@@ -33,7 +33,7 @@ if(false) {
   // promise debug
   const promiseMap: Map<string, any> = new Map();
   const OrigPromise: PromiseConstructor = global.Promise as PromiseConstructor;
-  global.Promise = function (func) {
+  (global as any).Promise = function (func) {
     const stack = new Error().stack;
     return new OrigPromise((resolve, reject) => {
       const uuid = uuids.v4();
